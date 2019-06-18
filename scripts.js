@@ -1,65 +1,59 @@
-(function() {
+var cryptocurrenciesTextEditor = (function() {
+  const apiEndpoint = "https://api.coinpaprika.com/v1/";
   const textArea = document.getElementById("textArea");
   const convertedText = document.getElementById("convertedText");
-  const apiEndpoint = "https://api.coinpaprika.com/v1/";
-  const debouncedAddNewMatchedCurrencies = _.debounce(
+  const debouncedUpdateCurrencyCache = _.debounce(
     updateCurrencyCache, // could define this function inside and rename the parent to updateCurrencyCache
     600
   );
-  const currencyCache = []; // currencyCache or smth
+  const currencyCache = [];
   const availableFunctionNames = ["Name", "Price"];
+  const matches = []; // CONST FFS. also, please move this definition so that it's right below foundCurrencies
   const functions = {
     //rename to availableFunctions for consistency
-    getName: getName, // consider making this a module with these functions defined within
-    getPrice: getPrice
+    updateName: updateName, // consider making this a module with these functions defined within
+    updatePrice: updatePrice
   };
-  let matches = []; // CONST FFS. also, please move this definition so that it's right below foundCurrencies
-
-  textArea.oninput = updateOutputText;
 
   function updateOutputText(event) {
     const value = event.target.value;
-    debouncedAddNewMatchedCurrencies(value);
+    debouncedUpdateCurrencyCache(value);
     if (currencyCache.length > 0) {
       convertText(value);
     }
   }
 
-  function getMatches(text) {
-    // change to updateMatches
-    let matches = [];
+  function updateMatches(text) {
     availableFunctionNames.forEach(functionName => {
       const regx = new RegExp(`{{ (${functionName})\/\\w+ }}`, "g");
       const newMatches = text.match(regx) || [];
-      matches = matches.concat(newMatches);
+      matches.push(...newMatches);
     });
+  }
 
-    return matches;
+  function getAttributeNameAndSymbolPair(regExpMatch) {
+    const pair = regExpMatch.replace(/({{ | }})/g, "").split("/"); //rename to functionSymbolPair
+    const attributeName = pair[0].toLowerCase();
+    const symbol = pair[1];
+
+    return { attributeName, symbol };
   }
 
   function updateCurrencyCache(text) {
-    matches = getMatches(text);
-    let shouldUpdateCurrencies = false;
+    updateMatches(text);
+    let shouldFetchNewData = false;
 
     if (matches) {
       matches.map(match => {
-        const pair = match.replace(/({{ | }})/g, "").split("/"); //rename to functionSymbolPair
-        const attributeName = pair[0].toLowerCase();
-        const symbol = pair[1];
-        const symbolIndex = currencyCache.findIndex(item => {
-          // change to find - you don't need the index
-          return item.symbol === symbol;
+        const { attributeName, symbol } = getAttributeNameAndSymbolPair(match);
+        const currency = currencyCache.find(currency => {
+          return currency.symbol === symbol;
         });
 
-        if (symbolIndex > -1) {
-          if (!currencyCache[symbolIndex][attributeName]) {
-            const newFoundMatch = {
-              // not needed, just update the reference. read about reference and value types. read some more.
-              ...currencyCache[symbolIndex],
-              [attributeName]: null
-            };
-            currencyCache[symbolIndex] = newFoundMatch;
-            shouldUpdateCurrencies = true;
+        if (currency) {
+          if (!currency[attributeName]) {
+            currency[attributeName] = null;
+            shouldFetchNewData = true;
           }
         } else {
           const newFoundMatch = {
@@ -67,30 +61,27 @@
             [attributeName]: null
           };
           currencyCache.push(newFoundMatch);
-          shouldUpdateCurrencies = true;
+          shouldFetchNewData = true;
         }
       });
 
       console.log(currencyCache);
-      console.log("shouldUpdateCurrencies", shouldUpdateCurrencies);
-      if (shouldUpdateCurrencies) {
-        updateFoundCurrencies().then(() => {
+      if (shouldFetchNewData) {
+        fetchNewDataForCurrencyCache().then(() => {
           convertText(text);
         });
       }
     }
   }
 
-  function updateFoundCurrencies() {
+  function fetchNewDataForCurrencyCache() {
     return Promise.all(
-      currencyCache.map(async (currency, index) => {
+      currencyCache.map(async currency => {
         for (var prop in currency) {
           if (!currency[prop]) {
             const functionName =
-              "get" + prop.charAt(0).toUpperCase() + prop.slice(1); //change to update
-            const newAttributes = await functions[functionName](currency);
-            currencyCache[index] = { ...currency, ...newAttributes };
-            return newAttributes;
+              "update" + prop.charAt(0).toUpperCase() + prop.slice(1); //change to update
+            return await functions[functionName](currency);
           }
         }
       })
@@ -102,14 +93,14 @@
 
     if (matches) {
       matches.forEach(match => {
-        const pair = match.replace(/({{ | }})/g, "").split("/");
-        const attributeName = pair[0].toLowerCase();
-        const symbol = pair[1]; // common function getAttributeAndSymbol
+        const { attributeName, symbol } = getAttributeNameAndSymbolPair(match);
         const currency = currencyCache.find(currency => {
           return currency.symbol === symbol;
         });
+        const validAttributeExists =
+          currency[attributeName] && currency[attributeName] !== "invalid";
 
-        if (currency[attributeName] && currency[attributeName] !== "invalid") { // validNameExists or smth
+        if (validAttributeExists) {
           textWithReplacedMatches = textWithReplacedMatches.replace(
             match,
             currency[attributeName]
@@ -121,79 +112,49 @@
     convertedText.innerText = textWithReplacedMatches;
   }
 
-  function getName(currency) {
-    console.log("getName");
+  function updateName(currency) {
     return axios
       .get(`${apiEndpoint}search/?q=${currency.symbol}&modifier=symbol_search`)
       .then(res => {
-        const currencyData = res.data.currencies.filter(item => {
+        const currencyData = res.data.currencies.find(item => {
           return item.symbol === currency.symbol;
-        })[0]; // find
+        });
 
         if (currencyData) {
-          return { name: currencyData.name, id: currencyData.id };
+          currency.name = currencyData.name;
+          currency.id = currencyData.id;
         } else {
-          return { name: "invalid", id: "invalid" };
+          currency.name = "invalid";
+          currency.id = "invalid";
         }
       });
   }
 
-  async function getPrice(currency) {
-    let updatedCurrency = currency; // no need to make a new reference (but double check)
-    let basicInfo = {};
-
+  async function updatePrice(currency) {
     if (!currency.id) {
-      basicInfo = await getName(currency);
-      updatedCurrency = { ...updatedCurrency, ...basicInfo };
+      await updateName(currency);
     }
 
-    if (updatedCurrency.id !== "invalid") {
-      return axios
-        .get(`${apiEndpoint}tickers/${updatedCurrency.id}`)
-        .then(res => {
-          const price = res.data.quotes.USD.price;
+    if (currency.id !== "invalid") {
+      return axios.get(`${apiEndpoint}tickers/${currency.id}`).then(res => {
+        const price = res.data.quotes.USD.price;
 
-          if (price) {
-            return { ...basicInfo, price: price };
-          } else {
-            return { price: "invalid" };
-          }
-        });
+        if (price) {
+          currency.price = price;
+        } else {
+          currency.price = "invalid";
+        }
+      });
     }
   }
 
-  // function updateMatches() {
-  //   return Promise.all(
-  //     foundCurrencies.map((match, i) => {
-  //       if (match.name === "") {
-  //         return axios
-  //           .get(
-  //             `${apiEndpoint}search/?q=${match.symbol}&modifier=symbol_search`
-  //           )
-  //           .then(res => {
-  //             const currency = res.data.currencies.filter(item => {
-  //               return item.symbol === match.symbol;
-  //             })[0];
+  function init() {
+    textArea.oninput = updateOutputText;
+  }
 
-  //             if (currency) {
-  //               return currency.name;
-  //             } else {
-  //               return "invalid currency";
-  //             }
-  //           })
-  //           .then(name => {
-  //             match.name = name;
-  //             return match;
-  //           })
-  //           .then(updatedMatch => {
-  //             foundCurrencies[i] = updatedMatch;
-  //             return updatedMatch;
-  //           })
-  //           .finally(() => console.log(foundCurrencies));
-  //       } else {
-  //         return match;
-  //       }
-  //     })
-  //   );
-  // }
+  return {
+    init: init
+  };
 })();
+
+cryptocurrenciesTextEditor.init();
