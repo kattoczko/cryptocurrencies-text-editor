@@ -1,8 +1,96 @@
-form {
+html {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+*,
+*:before,
+*:after {
+  -webkit-box-sizing: inherit;
+  -moz-box-sizing: inherit;
+  box-sizing: inherit;
+}
+
+:root {
+  --dark-gray: #323330;
+  --light-gray: #ededed;
+  --light-yellow: #ffee9a;
+}
+
+body {
+  margin: 0;
+  font-size: 100%;
+  background-color: var(--dark-gray);
+}
+
+.editor {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  box-sizing: border-box;
+  max-width: 1200px;
+  height: 85vh;
+  margin: 0 auto;
+  border: 40px solid var(--dark-gray);
+}
+
+.editor__instruction {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 60px;
+  background-color: pink;
+}
+
+.editor__original-text,
+.editor__output-text-wrapper {
+  width: 50%;
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
+.editor__original-text {
+  background-color: white;
+  border-right: 2px solid var(--light-gray);
+}
 textarea {
-  min-height: 200px;
+  font-family: "Inconsolata", monospace;
+  flex-grow: 1;
+  border: none;
+  padding: 30px;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--dark-gray);
+  resize: none;
+}
+
+textarea:focus {
+  outline: none;
+}
+
+.editor__error-message {
+  width: 100%;
+  background-color: var(--light-yellow);
+  opacity: 0;
+  transition: opacity ease-in 0.3s, padding ease-in 0.3s;
+}
+
+.editor__error-message--active {
+  padding: 20px;
+  opacity: 1;
+  transition: opacity ease-in 0.3s, padding ease-in 0.3s;
+}
+
+.editor__output-text-wrapper {
+  background-color: white;
+}
+
+.editor__output-text {
+  overflow: auto;
+  padding: 30px;
+  font-family: "Inconsolata", monospace;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--dark-gray);
 }
