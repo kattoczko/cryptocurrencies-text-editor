@@ -2,10 +2,11 @@ var cryptoCurrenciesTextEditor = (function() {
   const apiEndpoint = "https://api.coinpaprika.com/v1/";
   const textArea = document.getElementById("textArea");
   const convertedText = document.getElementById("convertedText");
+  const errorMessageElement = document.getElementById("errorMessage");
   const currencyCache = [];
-  const matches = [];
-  const availableMethods = initAvailableMethods();
+  const availableMethods = initAvailableMethods(); // zmienić init na get?
   const updateCurrencyCache = initUpdateCurrencyCache();
+  let matches = [];
 
   return {
     init: init
@@ -17,16 +18,21 @@ var cryptoCurrenciesTextEditor = (function() {
 
   function updateOutputText(event) {
     const value = event.target.value;
-    updateCurrencyCache(value);
     if (currencyCache.length > 0) {
       convertText(value);
     }
+    if (value === "") {
+      clearErrorMessage();
+    }
+    updateCurrencyCache(value);
+    console.log(currencyCache);
   }
 
   function initUpdateCurrencyCache() {
     return _.debounce(
       updateCurrencyCache, // could define this function inside and rename the parent to updateCurrencyCache
-      600
+      600,
+      { leading: false, maxWait: 200 }
     );
 
     function updateCurrencyCache(text) {
@@ -35,9 +41,7 @@ var cryptoCurrenciesTextEditor = (function() {
 
       if (matches) {
         matches.map(match => {
-          const { attributeName, symbol } = getAttributeNameAndSymbolPair(
-            match
-          );
+          const { attributeName, symbol } = getMatchParameters(match);
           const currency = currencyCache.find(currency => {
             return currency.symbol === symbol;
           });
@@ -61,7 +65,10 @@ var cryptoCurrenciesTextEditor = (function() {
         if (shouldFetchNewData) {
           fetchNewDataForCurrencyCache().then(() => {
             convertText(text);
+            showErrors(text);
           });
+        } else {
+          showErrors(text);
         }
       }
     }
@@ -115,20 +122,23 @@ var cryptoCurrenciesTextEditor = (function() {
   }
 
   function updateMatches(text) {
+    console.log("matches", matches);
     const methodNames = Object.keys(availableMethods);
+    let newMatches = [];
     methodNames.forEach(methodName => {
       const regx = new RegExp(`{{ (${methodName})\/\\w+ }}`, "g");
-      const newMatches = text.match(regx) || [];
-      matches.push(...newMatches);
+      newMatches = newMatches.concat(text.match(regx) || []);
     });
+    matches = newMatches;
   }
 
-  function getAttributeNameAndSymbolPair(regExpMatch) {
+  function getMatchParameters(regExpMatch) {
     const pair = regExpMatch.replace(/({{ | }})/g, "").split("/"); //rename to functionSymbolPair
+    const methodName = pair[0];
     const attributeName = pair[0].toLowerCase();
     const symbol = pair[1];
 
-    return { attributeName, symbol };
+    return { methodName, attributeName, symbol };
   }
 
   function fetchNewDataForCurrencyCache() {
@@ -149,7 +159,7 @@ var cryptoCurrenciesTextEditor = (function() {
 
     if (matches) {
       matches.forEach(match => {
-        const { attributeName, symbol } = getAttributeNameAndSymbolPair(match);
+        const { attributeName, symbol } = getMatchParameters(match);
         const currency = currencyCache.find(currency => {
           return currency.symbol === symbol;
         });
@@ -165,6 +175,60 @@ var cryptoCurrenciesTextEditor = (function() {
       });
     }
     convertedText.innerText = textWithReplacedMatches;
+  }
+
+  function showErrors(text) {
+    clearErrorMessage();
+
+    const allMatches = text.match(/{{ \w+\/\w+ }}/g);
+    const invalidSymbols = [];
+    const invalidMethodNames = [];
+
+    if (allMatches) {
+      allMatches.forEach(match => {
+        const { methodName, attributeName, symbol } = getMatchParameters(match);
+        const currency = currencyCache.find(currency => {
+          return currency.symbol === symbol;
+        });
+        const isNewSymbolError = !invalidSymbols.includes(symbol);
+        const isNewMethodError = !invalidMethodNames.includes(methodName);
+        if (!availableMethods[methodName] && isNewMethodError) {
+          //zamienić miejscami
+          invalidMethodNames.push(methodName);
+        } else if (currency[attributeName] === "invalid" && isNewSymbolError) {
+          //zamienić miejscami
+          invalidSymbols.push(symbol);
+        }
+      });
+    }
+    if (invalidSymbols.length > 0) {
+      addErrorMessages(
+        invalidSymbols,
+        symbol => `This symbol: ${symbol} is not valid`
+      );
+    }
+
+    if (invalidMethodNames.length > 0) {
+      addErrorMessages(
+        invalidMethodNames,
+        name => `This method name: ${name} is not valid`
+      );
+    }
+
+    function addErrorMessages(errors, createMessage) {
+      errors.forEach(error => {
+        const el = document.createElement("p");
+        const content = document.createTextNode(createMessage(error));
+        el.appendChild(content);
+        errorMessageElement.appendChild(el);
+      });
+      errorMessageElement.classList.add("editor__error-message--active");
+    }
+  }
+
+  function clearErrorMessage() {
+    errorMessageElement.innerHTML = "";
+    errorMessage.classList.remove("editor__error-message--active");
   }
 })();
 
