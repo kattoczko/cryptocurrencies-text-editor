@@ -30,12 +30,10 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  box-sizing: border-box;
   max-width: 1000px;
   height: 50vh;
   max-height: 50vh;
   margin: 20px auto 40px auto;
-  /* border: 40px solid var(--dark-gray); */
 }
 
 .editor__instruction {
