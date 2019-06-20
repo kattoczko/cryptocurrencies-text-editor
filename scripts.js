@@ -1,11 +1,12 @@
 var cryptoCurrenciesTextEditor = (function() {
   const apiEndpoint = "https://api.coinpaprika.com/v1/";
-  const textArea = document.getElementById("textArea");
-  const convertedText = document.getElementById("convertedText");
+  const textarea = document.getElementById("textarea");
+  const outputText = document.getElementById("outputText");
   const errorMessageElement = document.getElementById("errorMessage");
   const currencyCache = [];
   const availableMethods = initAvailableMethods(); // zmienić init na get?
   const updateCurrencyCache = initUpdateCurrencyCache();
+  const initialOutputText = "Output text will be shown here";
   let matches = [];
 
   return {
@@ -13,19 +14,21 @@ var cryptoCurrenciesTextEditor = (function() {
   };
 
   function init() {
-    textArea.oninput = updateOutputText;
+    outputText.innerText = initialOutputText;
+    textarea.oninput = updateOutputText;
   }
 
   function updateOutputText(event) {
     const value = event.target.value;
-    if (currencyCache.length > 0) {
-      convertText(value);
-    }
     if (value === "") {
+      outputText.innerText = initialOutputText;
       clearErrorMessage();
+    } else {
+      updateCurrencyCache(value);
+      if (currencyCache.length > 0) {
+        convertText(value);
+      }
     }
-    updateCurrencyCache(value);
-    console.log(currencyCache);
   }
 
   function initUpdateCurrencyCache() {
@@ -61,14 +64,16 @@ var cryptoCurrenciesTextEditor = (function() {
           }
         });
 
-        console.log(currencyCache);
         if (shouldFetchNewData) {
-          fetchNewDataForCurrencyCache().then(() => {
-            convertText(text);
-            showErrors(text);
-          });
+          fetchNewDataForCurrencyCache()
+            .then(() => {
+              convertText(text);
+              showErrors(text);
+            })
+            .catch(error => console.log(error));
         } else {
           showErrors(text);
+          convertText(text);
         }
       }
     }
@@ -97,7 +102,8 @@ var cryptoCurrenciesTextEditor = (function() {
             currency.name = "invalid";
             currency.id = "invalid";
           }
-        });
+        })
+        .catch(error => console.log(error));
     }
 
     async function updatePrice(currency) {
@@ -106,15 +112,18 @@ var cryptoCurrenciesTextEditor = (function() {
       }
 
       if (currency.id !== "invalid") {
-        return axios.get(`${apiEndpoint}tickers/${currency.id}`).then(res => {
-          const price = res.data.quotes.USD.price;
+        return axios
+          .get(`${apiEndpoint}tickers/${currency.id}`)
+          .then(res => {
+            const price = res.data.quotes.USD.price;
 
-          if (price) {
-            currency.price = price;
-          } else {
-            currency.price = "invalid";
-          }
-        });
+            if (price) {
+              currency.price = `${Math.round(price * 100) / 100}$`;
+            } else {
+              currency.price = "invalid";
+            }
+          })
+          .catch(error => console.log(error));
       } else {
         currency.price = "invalid";
       }
@@ -122,7 +131,6 @@ var cryptoCurrenciesTextEditor = (function() {
   }
 
   function updateMatches(text) {
-    console.log("matches", matches);
     const methodNames = Object.keys(availableMethods);
     let newMatches = [];
     methodNames.forEach(methodName => {
@@ -174,7 +182,7 @@ var cryptoCurrenciesTextEditor = (function() {
         }
       });
     }
-    convertedText.innerText = textWithReplacedMatches;
+    outputText.innerText = textWithReplacedMatches;
   }
 
   function showErrors(text) {
@@ -204,22 +212,22 @@ var cryptoCurrenciesTextEditor = (function() {
     if (invalidSymbols.length > 0) {
       addErrorMessages(
         invalidSymbols,
-        symbol => `This symbol: ${symbol} is not valid`
+        symbol => `<b>${symbol}</b>: is not a valid symbol`
       );
     }
 
     if (invalidMethodNames.length > 0) {
       addErrorMessages(
         invalidMethodNames,
-        name => `This method name: ${name} is not valid`
+        name => `<b>${name}</b>: is not a valid method`
       );
     }
 
     function addErrorMessages(errors, createMessage) {
       errors.forEach(error => {
         const el = document.createElement("p");
-        const content = document.createTextNode(createMessage(error));
-        el.appendChild(content);
+        el.innerHTML = createMessage(error);
+        // el.appendChild(content);
         errorMessageElement.appendChild(el);
       });
       errorMessageElement.classList.add("editor__error-message--active");
