@@ -1,3 +1,12 @@
+:root {
+  --dark-gray: #21252b;
+  --light-gray: #ededed;
+  --light-blue: #718b98;
+  --lighter-blue: #a6bcc7;
+  --light-yellow: #ffee9a;
+  --white: #fff;
+}
+
 html {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -9,12 +18,6 @@ html {
   -webkit-box-sizing: inherit;
   -moz-box-sizing: inherit;
   box-sizing: inherit;
-}
-
-:root {
-  --dark-gray: #21252b;
-  --light-gray: #ededed;
-  --light-yellow: #ffee9a;
 }
 
 body {
@@ -42,7 +45,7 @@ body {
   max-width: 1000px;
   margin: 0 auto;
   font-family: "Open Sans", sans-serif;
-  color: #718b98;
+  color: var(--light-blue);
   padding: 20px 0;
 }
 
@@ -70,12 +73,12 @@ body {
   font-size: 1rem;
 }
 .editor__instruction a {
-  color: #718b98;
+  color: var(--light-blue);
   font-size: 0.9rem;
   font-weight: 400;
 }
 .editor__instruction a:hover {
-  color: #a6bcc7;
+  color: var(--lighter-blue);
 }
 .editor__original-text,
 .editor__output-text-wrapper {
@@ -87,7 +90,7 @@ body {
 }
 
 .editor__original-text {
-  background-color: white;
+  background-color: var(--white);
   border-right: 2px solid var(--light-gray);
 }
 textarea {
@@ -121,7 +124,7 @@ textarea:focus {
 }
 
 .editor__output-text-wrapper {
-  background-color: white;
+  background-color: var(--white);
 }
 
 .editor__output-text {
