@@ -3,20 +3,63 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-
-    <title>Edytor</title>
-    <meta name="description" content="Edytor" />
-
+    <meta name="description" content="Editor" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Editor</title>
+    <link
+      href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Inconsolata:400,700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
 
   <body>
-    <form id="form">
-      <label for="textArea">Write text to be converted:</label>
-      <textarea id="textArea" name="textArea"></textarea>
-      <!-- <button id="submitBtn" type="submit">Submit</!-->
-    </form>
-    <div id="convertedText"></div>
+    <header class="editor__instruction">
+      <h1>Write article about cryptocurrencies</h1>
+      <p>
+        This editor helps you write articles about cryptocurrencies. You can
+        easly get particular cryptocurrency's name and it's current price.
+      </p>
+      <p>
+        <b>{{ Name&#47;currencySymbol }}</b
+        ><br />
+        use this pattern to get curreny's name. For examble {{ Name&#47;BTC }}
+      </p>
+      <p>
+        <b>{{ Price&#47;currencySymbol }}</b
+        ><br />
+        use this pattern to get the currency's current price in USD. For examble
+        {{ Price&#47;BTC }}
+      </p>
+
+      <h2>Example text</h2>
+      <b>
+        "In October 2011, {{ Name&#47;LTC }} ({{ Price&#47;LTC }}) was released.
+        It was the first successful cryptocurrency to use scrypt as its hash
+        function instead of SHA-256."
+      </b>
+      <p>
+        <a href="https://coinmarketcap.com/coins/views/all/" target="_blank"
+          >You can find cryptocurrencies' symbols here</a
+        >
+      </p>
+    </header>
+    <section class="editor">
+      <div class="editor__original-text">
+        <textarea
+          id="textarea"
+          placeholder="Write text you want to convert here"
+        ></textarea>
+        <div class="editor__error-message" id="errorMessage"></div>
+      </div>
+      <div class="editor__output-text-wrapper">
+        <div class="editor__output-text" id="outputText"></div>
+      </div>
+    </section>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
     <script src="./scripts.js"></script>
